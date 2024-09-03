@@ -1,25 +1,51 @@
 import 'package:flutter/material.dart';
 
-class QuestionnaireScreen extends StatefulWidget {
-  final String title;
-  final Map<String, List<Question>> categories;
+import '../firebase.dart';
 
-  QuestionnaireScreen({required this.title, required this.categories});
+class QuestionnaireScreen extends StatefulWidget {
+  final String questionnaireId;
+  final String title;
+
+  QuestionnaireScreen({required this.questionnaireId, required this.title});
 
   @override
   _QuestionnaireScreenState createState() => _QuestionnaireScreenState();
 }
 
 class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
+  final FirebaseService _firebaseService = FirebaseService();
   String? selectedCategory;
-  String? selectedOption;
-  final Map<String, String> comments = {}; // Store comments for each question
+  List<String> categories = [];
+  List<Map<String, dynamic>> questions = [];
+  Map<String, String> selectedOptions = {};
+  Map<String, String> comments = {};
 
   @override
   void initState() {
     super.initState();
-    selectedCategory =
-        widget.categories.keys.first; // Default to the first category
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    List<String> loadedCategories =
+        await _firebaseService.getCategories(widget.questionnaireId);
+    setState(() {
+      categories = loadedCategories;
+      if (categories.isNotEmpty) {
+        selectedCategory = categories.first;
+        _loadQuestions();
+      }
+    });
+  }
+
+  Future<void> _loadQuestions() async {
+    if (selectedCategory != null) {
+      List<Map<String, dynamic>> loadedQuestions = await _firebaseService
+          .getQuestions(widget.questionnaireId, selectedCategory!);
+      setState(() {
+        questions = loadedQuestions;
+      });
+    }
   }
 
   void _handleMenuSelection(String value) {
@@ -33,10 +59,10 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     }
   }
 
-  void _handleNext() {
-    // Implement logic for the "Next" button here
+  void _handleSaveOffline() {
+    // Implement logic for saving responses offline
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Next button pressed')),
+      SnackBar(content: Text('Responses saved offline')),
     );
   }
 
@@ -56,23 +82,21 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                 );
               }).toList();
             },
-            icon: Icon(Icons.more_vert),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(60.0),
-          child: Padding(
+      ),
+      body: Column(
+        children: [
+          Padding(
             padding: const EdgeInsets.all(8.0),
             child: DropdownButtonFormField<String>(
               decoration: InputDecoration(
                 labelText: 'Select Category',
-                filled: true,
-                fillColor: Colors.white,
                 border: OutlineInputBorder(),
               ),
               value: selectedCategory,
-              items: widget.categories.keys
-                  .map<DropdownMenuItem<String>>((String category) {
+              items:
+                  categories.map<DropdownMenuItem<String>>((String category) {
                 return DropdownMenuItem<String>(
                   value: category,
                   child: Text(category),
@@ -81,22 +105,17 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
               onChanged: (String? newValue) {
                 setState(() {
                   selectedCategory = newValue;
-                  selectedOption =
-                      null; // Reset selected option when category changes
+                  _loadQuestions();
                 });
               },
             ),
           ),
-        ),
-      ),
-      body: selectedCategory == null
-          ? Center(child: Text('Please select a category'))
-          : ListView.builder(
-              itemCount: widget.categories[selectedCategory]!.length,
+          Expanded(
+            child: ListView.builder(
+              itemCount: questions.length,
               itemBuilder: (context, index) {
-                final question = widget.categories[selectedCategory]![index];
-                final questionKey = 'question_$index';
-
+                final question = questions[index];
+                final questionId = question['id'];
                 return Card(
                   margin: EdgeInsets.all(10),
                   child: Padding(
@@ -105,30 +124,25 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          question.text,
+                          question['text'],
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                              fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         SizedBox(height: 10),
-                        Column(
-                          children: question.options.map((option) {
-                            return RadioListTile<String>(
-                              title: Text(option),
-                              value: option,
-                              groupValue: selectedOption,
-                              onChanged: (String? value) {
-                                setState(() {
-                                  selectedOption = value;
-                                });
-                              },
-                            );
-                          }).toList(),
-                        ),
+                        ...question['options'].map<Widget>((option) {
+                          return RadioListTile<String>(
+                            title: Text(option),
+                            value: option,
+                            groupValue: selectedOptions[questionId],
+                            onChanged: (String? value) {
+                              setState(() {
+                                selectedOptions[questionId] = value!;
+                              });
+                            },
+                          );
+                        }).toList(),
                         SizedBox(height: 10),
-                        if (selectedOption !=
-                            null) // Only show comment field if an option is selected
+                        if (selectedOptions[questionId] != null)
                           TextField(
                             decoration: InputDecoration(
                               labelText: 'Comment (if applicable)',
@@ -136,8 +150,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                             ),
                             onChanged: (text) {
                               setState(() {
-                                comments[questionKey] =
-                                    text; // Store comment for the question
+                                comments[questionId] = text;
                               });
                             },
                           ),
@@ -147,40 +160,14 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                 );
               },
             ),
-      floatingActionButton: Container(
-        width: 200.0,
-        height: 56.0,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue, // Background color
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30.0),
-            ),
           ),
-          onPressed: _handleNext,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.navigate_next, color: Colors.white),
-              SizedBox(width: 8),
-              Text(
-                'Save Offline',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _handleSaveOffline,
+        label: Text('Save Offline'),
+        icon: Icon(Icons.save),
       ),
     );
   }
-}
-
-class Question {
-  final String text;
-  final List<String> options;
-
-  Question({required this.text, required this.options});
 }

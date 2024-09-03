@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"pio-survey","appId":"1:1019314290235:android:b39b4badd2700e4ad2e61e","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"pio-survey","configurations":{"android":"1:1019314290235:android:b39b4badd2700e4ad2e61e","web":"1:1019314290235:web:e3dff6b94daac9d3d2e61e"}}}}}}

@@ -1,104 +1,94 @@
 import 'package:flutter/material.dart';
+import '../firebase.dart';
 
-import 'list_questionnaire.dart';
-import 'questionnaire_screen.dart';
-
-class ManageQuestionDetails extends StatefulWidget {
+class ResearcherDataScreen extends StatefulWidget {
+  final String questionnaireId;
   final String category;
 
-  ManageQuestionDetails({required this.category});
+  ResearcherDataScreen({required this.questionnaireId, required this.category});
 
   @override
-  _ManageQuestionDetailsState createState() => _ManageQuestionDetailsState();
+  _ResearcherDataScreenState createState() => _ResearcherDataScreenState();
 }
 
-class _ManageQuestionDetailsState extends State<ManageQuestionDetails> {
-  List<String> options = [];
-  String questionText = '';
+class _ResearcherDataScreenState extends State<ResearcherDataScreen> {
+  final FirebaseService _firebaseService = FirebaseService();
+  List<Map<String, dynamic>> questions = [];
+  bool isLoading = true;
 
-  void _addOption() {
-    setState(() {
-      options.add('');
-    });
+  @override
+  void initState() {
+    super.initState();
+    _loadQuestions();
   }
 
-  void _removeOption(int index) {
-    setState(() {
-      options.removeAt(index);
-    });
+  Future<void> _loadQuestions() async {
+    try {
+      List<Map<String, dynamic>> loadedQuestions = await _firebaseService
+          .getQuestions(widget.questionnaireId, widget.category);
+      setState(() {
+        questions = loadedQuestions;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading questions: $e');
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load questions. Please try again.')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Manage Questions for ${widget.category}'),
+        title: Text('Questions - ${widget.category}'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadQuestions,
+          ),
+        ],
       ),
-      body: Padding(
-        padding: EdgeInsets.all(10.0),
-        child: Column(
-          children: [
-            TextField(
-              onChanged: (value) {
-                questionText = value;
-              },
-              decoration: InputDecoration(
-                labelText: 'Question',
-                hintText: 'Enter your question here',
-              ),
-            ),
-            SizedBox(height: 20),
-            Expanded(
-              child: ListView.builder(
-                itemCount: options.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: TextField(
-                      onChanged: (value) {
-                        options[index] = value;
-                      },
-                      decoration: InputDecoration(
-                        labelText: 'Option ${index + 1}',
-                        hintText: 'Enter option text',
-                      ),
-                    ),
-                    trailing: IconButton(
-                      icon: Icon(Icons.remove_circle_outline),
-                      onPressed: () {
-                        _removeOption(index);
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _addOption,
-                  icon: Icon(Icons.add),
-                  label: Text('Add Option'),
-                ),
-                SizedBox(width: 20),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    if (questionText.isNotEmpty && options.isNotEmpty) {
-                      // Save the question with options here
-                      categories[widget.category]!.add(
-                        Question(text: questionText, options: options),
-                      );
-                      Navigator.of(context).pop();
-                    }
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : questions.isEmpty
+              ? Center(child: Text('No questions available.'))
+              : ListView.builder(
+                  itemCount: questions.length,
+                  itemBuilder: (context, index) {
+                    return _buildQuestionCard(questions[index]);
                   },
-                  icon: Icon(Icons.save),
-                  label: Text('Save Question'),
                 ),
+    );
+  }
+
+  Widget _buildQuestionCard(Map<String, dynamic> question) {
+    return Card(
+      margin: EdgeInsets.all(10),
+      child: ExpansionTile(
+        title: Text(question['text']),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Category: ${question['category']}'),
+                SizedBox(height: 8),
+                Text('Options:'),
+                ...(question['options'] as List<dynamic>)
+                    .map((option) => Padding(
+                          padding: const EdgeInsets.only(left: 16.0),
+                          child: Text('• $option'),
+                        )),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -1,135 +1,32 @@
 import 'package:flutter/material.dart';
-import 'list_questionnaire.dart';
+import '../firebase.dart';
 import 'manage_question.dart';
-import 'questionnaire_screen.dart'; // Import the ManageQuestion screen
 
-class ManageCategory extends StatelessWidget {
+class ManageCategory extends StatefulWidget {
+  final String questionnaireId;
+
+  ManageCategory({required this.questionnaireId, required String title});
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Manage Questions'),
-      ),
-      body: ListView.builder(
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          String category = categories.keys.elementAt(index);
-          return Card(
-            margin: EdgeInsets.all(10),
-            child: ListTile(
-              title: Text(category),
-              subtitle: Text(
-                  '${categories[category]!.length} questions in this category'),
-              trailing: PopupMenuButton<String>(
-                onSelected: (value) {
-                  switch (value) {
-                    case 'Edit':
-                      // Implement edit logic here (e.g., rename category)
-                      _editCategoryDialog(context, category);
-                      break;
-                    case 'Delete':
-                      // Implement delete logic here
-                      _deleteCategory(context, category);
-                      break;
-                  }
-                },
-                itemBuilder: (BuildContext context) {
-                  return {'Edit', 'Delete'}.map((String choice) {
-                    return PopupMenuItem<String>(
-                      value: choice,
-                      child: Text(choice),
-                    );
-                  }).toList();
-                },
-                icon: Icon(Icons.more_vert),
-              ),
-              onTap: () {
-                // Navigate to the ManageQuestion screen when a category is clicked
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ManageQuestion(category: category),
-                  ),
-                );
-              },
-            ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _addCategoryDialog(context);
-        },
-        child: Icon(Icons.add),
-        tooltip: 'Add Category',
-      ),
-    );
+  _ManageCategoryState createState() => _ManageCategoryState();
+}
+
+class _ManageCategoryState extends State<ManageCategory> {
+  final FirebaseService _firebaseService = FirebaseService();
+  List<String> categories = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
   }
 
-  void _editCategoryDialog(BuildContext context, String category) {
-    String updatedCategory = category;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Edit Category'),
-          content: TextField(
-            onChanged: (value) {
-              updatedCategory = value;
-            },
-            decoration: InputDecoration(hintText: "Enter New Category Name"),
-            controller: TextEditingController(text: category),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: Text('Save'),
-              onPressed: () {
-                if (updatedCategory.isNotEmpty && updatedCategory != category) {
-                  // Rename the category
-                  List<Question>? questions = categories.remove(category);
-                  categories[updatedCategory] = questions!;
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _deleteCategory(BuildContext context, String category) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Delete Category'),
-          content: Text('Are you sure you want to delete "$category"?'),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: Text('Delete'),
-              onPressed: () {
-                categories.remove(category);
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
+  Future<void> _loadCategories() async {
+    List<String> loadedCategories =
+        await _firebaseService.getCategories(widget.questionnaireId);
+    setState(() {
+      categories = loadedCategories;
+    });
   }
 
   void _addCategoryDialog(BuildContext context) {
@@ -155,16 +52,58 @@ class ManageCategory extends StatelessWidget {
             ),
             TextButton(
               child: Text('Save'),
-              onPressed: () {
+              onPressed: () async {
                 if (newCategory.isNotEmpty) {
-                  categories[newCategory] = [];
+                  await _firebaseService.addCategory(
+                      widget.questionnaireId, newCategory);
                   Navigator.of(context).pop();
+                  _loadCategories();
                 }
               },
             ),
           ],
         );
       },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Manage Categories'),
+      ),
+      body: categories.isEmpty
+          ? Center(child: Text('No categories available'))
+          : ListView.builder(
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                return Card(
+                  margin: EdgeInsets.all(10),
+                  child: ListTile(
+                    title: Text(categories[index]),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ManageQuestion(
+                            questionnaireId: widget.questionnaireId,
+                            category: categories[index],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _addCategoryDialog(context);
+        },
+        child: Icon(Icons.add),
+        tooltip: 'Add Category',
+      ),
     );
   }
 }

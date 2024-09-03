@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1019314290235",
+    "project_id": "pio-survey",
+    "storage_bucket": "pio-survey.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1019314290235:android:b39b4badd2700e4ad2e61e",
+        "android_client_info": {
+          "package_name": "com.example.pio_survey"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdUkLjg8TnZko6dxpM4bKlHqh7iQHpNlk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

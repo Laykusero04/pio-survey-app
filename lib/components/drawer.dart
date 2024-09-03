@@ -51,15 +51,15 @@ class AppDrawer extends StatelessWidget {
               Navigator.of(context).pushReplacementNamed('/questionnaires');
             },
           ),
-          ListTile(
-            leading: Icon(Icons.question_answer),
-            title: Text('Manage Questionnaire'),
-            onTap: () {
-              // Handle Manage Questionnaire tap
-              Navigator.of(context)
-                  .pushReplacementNamed('/manageQuestionnaire');
-            },
-          ),
+          // ListTile(
+          //   leading: Icon(Icons.question_answer),
+          //   title: Text('Manage Questionnaire'),
+          //   onTap: () {
+          //     // Handle Manage Questionnaire tap
+          //     Navigator.of(context)
+          //         .pushReplacementNamed('/manageQuestionnaire');
+          //   },
+          // ),
           ListTile(
             leading: Icon(Icons.logout),
             title: Text('Logout'),
