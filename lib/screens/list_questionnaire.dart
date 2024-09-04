@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import '../components/role_based_popup_menu.dart';
 import '../firebase.dart';
-import 'manage_categories.dart';
-import 'manage_question_details.dart';
+import 'package:intl/intl.dart';
 import 'questionnaire_screen.dart';
 import '../components/drawer.dart';
 
@@ -79,67 +79,28 @@ class _ListQuestionnaireScreenState extends State<ListQuestionnaireScreen> {
             margin: EdgeInsets.all(10),
             child: ListTile(
               title: Text(questionnaires[index]['title']),
-              subtitle: Text(
-                'Created at: ${questionnaires[index]['createdAt']?.toDate().toString() ?? 'N/A'}',
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Created at: ${questionnaires[index]['createdAt'] != null ? DateFormat('yyyy-MM-dd HH:mm').format(questionnaires[index]['createdAt'].toDate()) : 'Unknown'}',
+                  ),
+                  Text(
+                    'Created by: ${questionnaires[index]['createdBy'] ?? 'Unknown'}',
+                  ),
+                ],
               ),
-              trailing: PopupMenuButton<String>(
-                onSelected: (value) {
-                  switch (value) {
-                    case 'Manage Questionnaire':
-                      // Navigate to the ManageCategory screen
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ManageCategory(
-                            questionnaireId:
-                                questionnaires[index]['id'] as String,
-                            title: '',
-                          ),
-                        ),
-                      );
-                      break;
-
-                    case 'Show Results':
-                      break;
-
-                    case 'Delete':
-                      break;
-
-                    case 'Edit':
-                      break;
-
-                    case 'Report':
-                      break;
-                  }
-                },
-                itemBuilder: (BuildContext context) {
-                  return {
-                    'Manage Questionnaire',
-                    'Show Results',
-                    'Delete',
-                    'Edit',
-                    'Report'
-                  }.map((String choice) {
-                    return PopupMenuItem<String>(
-                      value: choice,
-                      child: Text(choice),
-                    );
-                  }).toList();
-                },
-                icon: Icon(Icons.more_vert),
+              trailing: RoleBasedPopupMenu(
+                questionnaire: questionnaires[index],
+                refreshList: _loadQuestionnaires,
               ),
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ResearcherDataScreen(
-                      questionnaireId: questionnaires[index]['id'] as String,
-                      category: questionnaires[index]['catgory'] as String,
-
-                      // Error
-                      // Error
-                      // Error
-                      // Error
+                    builder: (context) => QuestionnaireScreen(
+                      questionnaireId: questionnaires[index]['id'],
+                      title: questionnaires[index]['title'],
                     ),
                   ),
                 );

@@ -40,7 +40,6 @@ class _ManageQuestionState extends State<ManageQuestion> {
         });
       }
     } catch (e) {
-      // Handle any errors here
       print('Error loading questions: $e');
     }
   }

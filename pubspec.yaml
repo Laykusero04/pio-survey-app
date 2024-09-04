@@ -39,6 +39,14 @@ dependencies:
   flutter_swiper_null_safety: ^1.0.2
   firebase_core: ^2.24.2
   cloud_firestore: ^4.14.0
+  fl_chart: ^0.69.0
+  firebase_auth: ^4.16.0
+  intl: ^0.19.0
+  connectivity_plus: ^6.0.5
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
+  path_provider: ^2.1.4
+  provider: ^6.1.2
 
 dev_dependencies:
   flutter_test:

@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
+
+  firebase_auth.FirebaseAuth get auth => _auth;
 
   // Questionnaires
   Future<List<Map<String, dynamic>>> getQuestionnaires() async {
@@ -9,49 +13,30 @@ class FirebaseService {
         await _firestore.collection('questionnaires').get();
     return snapshot.docs.map((doc) {
       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      data['id'] = doc.id; // Add the document ID to the map
+      data['id'] = doc.id;
       return data;
     }).toList();
   }
 
   Future<void> addQuestionnaire(String title) async {
+    firebase_auth.User? currentUser = _auth.currentUser;
     await _firestore.collection('questionnaires').add({
       'title': title,
       'createdAt': FieldValue.serverTimestamp(),
+      'createdBy': currentUser?.email ?? 'Unknown',
+      'categories': [],
     });
   }
 
   // Categories
   Future<List<String>> getCategories(String questionnaireId) async {
-    try {
-      DocumentSnapshot doc = await _firestore
-          .collection('questionnaires')
-          .doc(questionnaireId)
-          .get();
-
-      if (!doc.exists) {
-        print("Document does not exist");
-        return [];
-      }
-
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
-      if (!data.containsKey('categories')) {
-        print("Categories field does not exist in the document");
-        return [];
-      }
-
-      var categories = data['categories'];
-      if (categories is List) {
-        return List<String>.from(categories);
-      } else {
-        print("Categories field is not a List");
-        return [];
-      }
-    } catch (e) {
-      print("Error fetching categories: $e");
-      return [];
-    }
+    DocumentSnapshot doc = await _firestore
+        .collection('questionnaires')
+        .doc(questionnaireId)
+        .get();
+    if (!doc.exists) return [];
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return List<String>.from(data['categories'] ?? []);
   }
 
   Future<void> addCategory(String questionnaireId, String category) async {
@@ -69,9 +54,11 @@ class FirebaseService {
         .collection('questions')
         .where('category', isEqualTo: category)
         .get();
-    return snapshot.docs
-        .map((doc) => doc.data() as Map<String, dynamic>)
-        .toList();
+    return snapshot.docs.map((doc) {
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList();
   }
 
   Future<void> addQuestion(String questionnaireId, String category, String text,
@@ -127,5 +114,48 @@ class FirebaseService {
     }
   }
 
-  static saveResponse(String title, Map<String, String> selectedOptions) {}
+  Future<void> saveResponse(String questionnaireId, String questionId,
+      String response, String? comment) async {
+    await _firestore
+        .collection('questionnaires')
+        .doc(questionnaireId)
+        .collection('responses')
+        .add({
+      'questionId': questionId,
+      'response': response,
+      'comment': comment,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getResponses(
+      String questionnaireId) async {
+    QuerySnapshot snapshot = await _firestore
+        .collection('questionnaires')
+        .doc(questionnaireId)
+        .collection('responses')
+        .get();
+    return snapshot.docs.map((doc) {
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList();
+  }
+
+  Future<Map<String, List<Map<String, dynamic>>>>
+      getAllQuestionsGroupedByCategory(String questionnaireId) async {
+    Map<String, List<Map<String, dynamic>>> result = {};
+
+    // Fetch all categories
+    List<String> categories = await getCategories(questionnaireId);
+
+    // Fetch questions for each category
+    for (String category in categories) {
+      List<Map<String, dynamic>> questions =
+          await getQuestions(questionnaireId, category);
+      result[category] = questions;
+    }
+
+    return result;
+  }
 }

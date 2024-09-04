@@ -4,8 +4,9 @@ import 'manage_question.dart';
 
 class ManageCategory extends StatefulWidget {
   final String questionnaireId;
+  final String title;
 
-  ManageCategory({required this.questionnaireId, required String title});
+  ManageCategory({required this.questionnaireId, required this.title});
 
   @override
   _ManageCategoryState createState() => _ManageCategoryState();
@@ -71,7 +72,7 @@ class _ManageCategoryState extends State<ManageCategory> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Manage Categories'),
+        title: Text('Manage Categories - ${widget.title}'),
       ),
       body: categories.isEmpty
           ? Center(child: Text('No categories available'))
